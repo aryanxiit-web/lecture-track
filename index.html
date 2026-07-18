@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lecture Register — Weekly Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0c11;
+    --surface: #12151c;
+    --surface-2: #1a1e28;
+    --surface-3: #21262f;
+    --border: #262b36;
+    --border-soft: #1d212a;
+    --border-hour: #2c3240;
+    --text: #e8eaef;
+    --text-dim: #7c8398;
+    --text-faint: #4d5364;
+
+    --physics: #22d3ee;
+    --physics-dim: rgba(34,211,238,0.14);
+    --chemistry: #f5a623;
+    --chemistry-dim: rgba(245,166,35,0.14);
+    --maths: #e94ff5;
+    --maths-dim: rgba(233,79,245,0.14);
+
+    --danger: #ef4444;
+    --danger-dim: rgba(239,68,68,0.12);
+    --due: #fb923c;
+    --success: #34d399;
+    --success-dim: rgba(52,211,153,0.10);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body{ min-height:100vh; padding: 28px 24px 60px; }
+  .app{ max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  .masthead{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap: 20px; flex-wrap: wrap; margin-bottom: 22px;
+    border-bottom: 1px solid var(--border); padding-bottom: 18px;
+  }
+  .masthead-title{ display:flex; flex-direction:column; gap:4px; }
+  .eyebrow{
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  h1{ font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  h1 span{ color: var(--physics); }
+
+  .week-nav{ display:flex; align-items:center; gap: 10px; }
+  .week-range{ font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 168px; text-align:center; }
+  .nav-btn{
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+    display:flex; align-items:center; justify-content:center; font-size: 15px;
+    transition: background .15s, border-color .15s;
+  }
+  .nav-btn:hover{ background: var(--surface-3); border-color: #343b49; }
+  .nav-btn:focus-visible, .today-btn:focus-visible, .cell:focus-visible, button:focus-visible, input:focus-visible{
+    outline: 2px solid var(--physics); outline-offset: 2px;
+  }
+  .today-btn{
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 8px 12px;
+    border-radius: 8px; cursor: pointer; transition: all .15s;
+  }
+  .today-btn:hover{ color: var(--text); border-color: var(--physics); }
+
+  /* ---------- Legend + Stats ---------- */
+  .info-row{ display:flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; align-items: stretch; }
+  .legend{
+    display:flex; gap: 16px; flex-wrap: wrap; align-items:center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 18px; flex: 1; min-width: 260px;
+  }
+  .legend-group{ display:flex; gap:14px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap: 7px; font-size: 12.5px; color: var(--text-dim); }
+  .swatch{ width: 10px; height: 10px; border-radius: 3px; flex-shrink:0; }
+  .legend-sep{ width:1px; align-self:stretch; background: var(--border); margin: 0 2px; }
+
+  .stats{ display:flex; gap: 10px; }
+  .stat-card{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; min-width: 84px; text-align:center; }
+  .stat-num{ font-family:'JetBrains Mono', monospace; font-size: 19px; font-weight: 600; line-height:1.1; }
+  .stat-label{ font-size: 10.5px; color: var(--text-faint); text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
+  .stat-card.missed .stat-num{ color: var(--danger); }
+  .stat-card.done .stat-num{ color: var(--success); }
+
+  /* ---------- Grid ---------- */
+  .grid-scroll{ overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  .grid{
+    display: grid;
+    grid-template-columns: 96px repeat(7, minmax(122px, 1fr));
+    grid-auto-rows: 29px;
+    min-width: 980px;
+  }
+  .corner, .day-head{
+    position: sticky; top:0; z-index: 5;
+    background: var(--surface-2); border-bottom: 1px solid var(--border);
+    padding: 12px 8px; text-align:center; grid-row: 1;
+  }
+  .corner{ left:0; z-index:6; border-right: 1px solid var(--border); }
+  .day-head{ border-left: 1px solid var(--border-soft); }
+  .day-head .dname{ font-family:'Space Grotesk', sans-serif; font-size: 13px; font-weight:600; letter-spacing:.03em; }
+  .day-head .ddate{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint); margin-top:2px; }
+  .day-head.is-today{ background: linear-gradient(180deg, rgba(34,211,238,0.13), var(--surface-2) 90%); }
+  .day-head.is-today .dname{ color: var(--physics); }
+  .day-head.is-today::after{ content:''; display:block; height:2px; background: var(--physics); margin-top:8px; border-radius:2px; }
+
+  .time-cell{
+    position: sticky; left: 0; z-index: 4;
+    background: var(--surface-2); border-right: 1px solid var(--border);
+    border-top: 1px solid var(--border-hour);
+    font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint);
+    display:flex; align-items:flex-start; justify-content:center; padding-top: 4px;
+    text-align:center; line-height:1.3; grid-column: 1;
+  }
+
+  .cell{
+    border-bottom: 1px solid var(--border-soft); border-left: 1px solid var(--border-soft);
+    padding: 3px 6px; cursor: pointer; position: relative;
+  }
+  .cell.hour-start{ border-top: 1px solid var(--border-hour); }
+  .cell.empty:hover{ background: var(--surface-2); }
+  .cell.empty::before{
+    content:'+'; color: var(--text-faint); font-size: 14px; opacity:0;
+    position:absolute; top:50%; left:50%; transform: translate(-50%,-50%); transition: opacity .12s;
+  }
+  .cell.empty:hover::before{ opacity: 0.6; }
+
+  .lec{
+    height: 100%; width:100%; border-radius: 8px; padding: 6px 8px; font-size: 12px;
+    border-left: 3px solid transparent; position:relative; cursor:pointer;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .lec-name{ font-weight:600; line-height:1.25; word-break: break-word; }
+  .lec-time{ font-family:'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint); margin-top:auto; padding-top:3px; text-transform:uppercase; letter-spacing:.03em; }
+
+  .lec.subj-physics{ background: var(--physics-dim); border-left-color: var(--physics); }
+  .lec.subj-chemistry{ background: var(--chemistry-dim); border-left-color: var(--chemistry); }
+  .lec.subj-maths{ background: var(--maths-dim); border-left-color: var(--maths); }
+
+  .lec.completed{ opacity: 0.5; }
+  .lec.completed .lec-name{ text-decoration: line-through; text-decoration-color: var(--text-faint); }
+  .lec.today-pending{ box-shadow: inset 0 0 0 1.5px var(--due); }
+
+  .pulse-dot{
+    width:7px; height:7px; border-radius:50%; background: var(--due);
+    position:absolute; top:7px; right:7px; animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:.4; transform:scale(1.3);} }
+
+  .check-btn{
+    position:absolute; top:5px; right:5px; width:19px; height:19px; border-radius:6px;
+    border: 1.5px solid var(--text-faint); background: var(--surface); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0; color: transparent; font-size: 12px; line-height:1;
+  }
+  .lec.completed .check-btn{ border-color: var(--success); background: var(--success-dim); color: var(--success); }
+  .check-btn:hover{ border-color: var(--success); }
+
+  .lec.missed{ border-left-color: var(--danger); box-shadow: inset 0 0 0 1px rgba(239,68,68,0.35); }
+  .stamp{
+    position:absolute; bottom:5px; right:5px; border:1.5px solid var(--danger); color: var(--danger);
+    font-family:'JetBrains Mono', monospace; font-size: 8.5px; font-weight:700; letter-spacing:.05em;
+    padding: 1px 5px; border-radius: 3px; transform: rotate(-6deg); opacity:0.9; background: rgba(239,68,68,0.07);
+  }
+
+  @media (prefers-reduced-motion: reduce){ .pulse-dot{ animation: none; } }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position: fixed; inset:0; background: rgba(4,5,8,0.72); backdrop-filter: blur(2px);
+    display:flex; align-items:center; justify-content:center; z-index: 50; padding: 20px;
+  }
+  .overlay.hidden{ display:none; }
+  .modal{ background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 380px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .modal-when{ font-family:'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-faint); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
+  .modal h2{ font-family:'Space Grotesk', sans-serif; font-size: 17px; margin: 0 0 18px; }
+  .field-label{ font-size: 11.5px; color: var(--text-dim); margin-bottom: 7px; display:block; font-weight:500; }
+  .subj-row{ display:flex; gap: 8px; margin-bottom: 16px; }
+  .subj-btn{
+    flex:1; border-radius: 9px; padding: 9px 4px; cursor:pointer; font-size: 12.5px; font-weight:600;
+    background: var(--surface-2); border: 1.5px solid var(--border); color: var(--text-dim);
+    transition: all .12s; display:flex; flex-direction:column; align-items:center; gap:5px;
+  }
+  .subj-btn .dot{ width:9px; height:9px; border-radius:50%; }
+  .subj-btn[data-s="physics"] .dot{ background: var(--physics); }
+  .subj-btn[data-s="chemistry"] .dot{ background: var(--chemistry); }
+  .subj-btn[data-s="maths"] .dot{ background: var(--maths); }
+  .subj-btn.active[data-s="physics"]{ border-color: var(--physics); color: var(--physics); background: var(--physics-dim); }
+  .subj-btn.active[data-s="chemistry"]{ border-color: var(--chemistry); color: var(--chemistry); background: var(--chemistry-dim); }
+  .subj-btn.active[data-s="maths"]{ border-color: var(--maths); color: var(--maths); background: var(--maths-dim); }
+
+  .text-input{
+    width:100%; background: var(--surface-2); border: 1.5px solid var(--border); color: var(--text);
+    border-radius: 9px; padding: 10px 12px; font-size: 13.5px; font-family:'Inter',sans-serif; margin-bottom: 16px;
+  }
+  .text-input:focus{ border-color: var(--physics); outline:none; }
+
+  .dur-row{ display:flex; gap:8px; margin-bottom: 6px; }
+  .dur-btn{ flex:1; border-radius:9px; padding: 8px 4px; cursor:pointer; font-size:12.5px; font-weight:600; background: var(--surface-2); border: 1.5px solid var(--border); color: var(--text-dim); }
+  .dur-btn.active{ border-color: var(--physics); color: var(--physics); background: var(--physics-dim); }
+
+  .type-row{ display:flex; gap:8px; margin: 16px 0 20px; }
+  .type-btn{ flex:1; border-radius:9px; padding: 8px; cursor:pointer; font-size:12px; background: var(--surface-2); border: 1.5px solid var(--border); color: var(--text-dim); }
+  .type-btn.active{ border-color: var(--text-dim); color: var(--text); background: var(--surface-3); }
+
+  .err-msg{ font-size: 11.5px; color: var(--danger); margin: -10px 0 14px; min-height: 14px; }
+
+  .modal-actions{ display:flex; gap: 8px; }
+  .btn{ flex:1; border-radius: 9px; padding: 10px; font-size: 13px; font-weight:600; cursor:pointer; border:none; }
+  .btn-save{ background: var(--physics); color: #05171a; }
+  .btn-cancel{ background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); }
+  .btn-delete{ background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,0.35); }
+  .hidden{ display:none !important; }
+
+  footer{ text-align:center; margin-top: 26px; font-size: 11.5px; color: var(--text-faint); font-family:'JetBrains Mono', monospace; }
+  .foot-actions{ display:flex; gap:14px; justify-content:center; margin-top:8px; }
+  .foot-actions button{ background:none; border:none; color: var(--text-faint); text-decoration: underline; cursor:pointer; font-family: inherit; font-size: 11.5px; }
+  .foot-actions button:hover{ color: var(--text-dim); }
+
+  @media (max-width: 640px){
+    body{ padding: 18px 12px 40px; }
+    .masthead{ flex-direction:column; align-items:flex-start; }
+    h1{ font-size: 21px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="masthead">
+    <div class="masthead-title">
+      <div class="eyebrow">Self-Study · Lecture Register</div>
+      <h1>Weekly <span>Watch</span> Tracker</h1>
+    </div>
+    <div class="week-nav">
+      <button class="nav-btn" id="prevWeek" aria-label="Previous week">←</button>
+      <div class="week-range" id="weekRange">—</div>
+      <button class="nav-btn" id="nextWeek" aria-label="Next week">→</button>
+      <button class="today-btn" id="jumpToday">This week</button>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="legend">
+      <div class="legend-group">
+        <div class="legend-item"><span class="swatch" style="background:var(--physics)"></span>Physics</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--chemistry)"></span>Chemistry</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--maths)"></span>Maths</div>
+      </div>
+      <div class="legend-sep"></div>
+      <div class="legend-group">
+        <div class="legend-item"><span class="swatch" style="background:var(--due)"></span>Due today</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--danger)"></span>Missed</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--success)"></span>Watched</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Scheduled</div></div>
+      <div class="stat-card done"><div class="stat-num" id="statDone">0</div><div class="stat-label">Watched</div></div>
+      <div class="stat-card missed"><div class="stat-num" id="statMissed">0</div><div class="stat-label">Missed</div></div>
+    </div>
+  </div>
+
+  <div class="grid-scroll">
+    <div class="grid" id="grid"><!-- built by JS --></div>
+  </div>
+
+  <footer>
+    Saved automatically on this device
+    <div class="foot-actions">
+      <button id="exportBtn">Export backup</button>
+      <button id="importBtn">Import backup</button>
+    </div>
+  </footer>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="modal">
+    <div class="modal-when" id="modalWhen">Mon · 9:00 AM</div>
+    <h2 id="modalTitle">Add lecture</h2>
+
+    <span class="field-label">Subject</span>
+    <div class="subj-row" id="subjRow">
+      <button class="subj-btn" data-s="physics"><span class="dot"></span>Physics</button>
+      <button class="subj-btn" data-s="chemistry"><span class="dot"></span>Chem</button>
+      <button class="subj-btn" data-s="maths"><span class="dot"></span>Maths</button>
+    </div>
+
+    <span class="field-label">Topic / lecture name</span>
+    <input class="text-input" id="lecInput" type="text" placeholder="e.g. Rotational Motion – L14" maxlength="60">
+
+    <span class="field-label">Duration</span>
+    <div class="dur-row" id="durRow">
+      <button class="dur-btn active" data-d="60">1 hr</button>
+      <button class="dur-btn" data-d="90">1.5 hr</button>
+      <button class="dur-btn" data-d="120">2 hr</button>
+    </div>
+    <div class="err-msg" id="errMsg"></div>
+
+    <div class="type-row" id="typeRow">
+      <button class="type-btn active" data-t="live">Live class</button>
+      <button class="type-btn" data-t="recorded">Recorded</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-delete hidden" id="deleteBtn">Delete</button>
+      <button class="btn btn-cancel" id="cancelBtn">Cancel</button>
+      <button class="btn btn-save" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="application/json" style="display:none">
+
+<script>
+(function(){
+  const START_HOUR = 6;      // 6 AM
+  const END_HOUR = 22;       // 10 PM (exclusive end of grid)
+  const SLOT_COUNT = (END_HOUR - START_HOUR) * 2; // 30-min slots
+  const DAY_NAMES = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const STORE_KEY = 'lectureRegisterData_v2';
+
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function isoDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function getMonday(d){
+    const date = new Date(d); const day = date.getDay();
+    const diff = day===0 ? -6 : 1-day;
+    date.setDate(date.getDate()+diff); date.setHours(0,0,0,0);
+    return date;
+  }
+  function addDays(d,n){ const nd = new Date(d); nd.setDate(nd.getDate()+n); return nd; }
+  function hourLabel(h){
+    const period = h>=12 ? 'PM' : 'AM';
+    let hr = h%12; if(hr===0) hr=12;
+    return hr+' '+period;
+  }
+  function timeLabel(h,m){
+    const period = h>=12 ? 'PM' : 'AM';
+    let hr = h%12; if(hr===0) hr=12;
+    return hr+(m===30 ? ':30' : ':00')+' '+period;
+  }
+  function fmtDateShort(d){ return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}); }
+  function fmtRange(monday){
+    const sunday = addDays(monday,6);
+    const sameMonth = monday.getMonth()===sunday.getMonth();
+    const left = monday.toLocaleDateString('en-IN',{day:'numeric', month: sameMonth?undefined:'short'});
+    const right = sunday.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    return left+' – '+right+', '+sunday.getFullYear();
+  }
+  function slotToHM(slot){ return { h: START_HOUR + Math.floor(slot/2), m: (slot%2)*30 }; }
+  function hmToSlot(h,m){ return (h-START_HOUR)*2 + (m>=30?1:0); }
+
+  let data = {};
+  try{ data = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ data = {}; }
+
+  // migrate from v1 (hour-only keys, implicit 60min) if present
+  (function migrateV1(){
+    try{
+      const old = JSON.parse(localStorage.getItem('lectureRegisterData_v1') || 'null');
+      if(old && Object.keys(data).length===0){
+        Object.keys(old).forEach(k=>{
+          const m = k.match(/^(\d{4}-\d{2}-\d{2})_(\d{1,2})$/);
+          if(m){
+            const newKey = m[1]+'_'+pad(parseInt(m[2],10))+':00';
+            data[newKey] = Object.assign({durationMin:60}, old[k]);
+          }
+        });
+        persist();
+      }
+    }catch(e){}
+  })();
+
+  function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+
+  let weekStart = getMonday(new Date());
+  let modalCtx = null;
+  let activeSubj = null;
+  let activeType = 'live';
+  let activeDur = 60;
+
+  const grid = document.getElementById('grid');
+  const weekRangeEl = document.getElementById('weekRange');
+  const overlay = document.getElementById('overlay');
+  const modalWhen = document.getElementById('modalWhen');
+  const modalTitle = document.getElementById('modalTitle');
+  const lecInput = document.getElementById('lecInput');
+  const subjRow = document.getElementById('subjRow');
+  const typeRow = document.getElementById('typeRow');
+  const durRow = document.getElementById('durRow');
+  const deleteBtn = document.getElementById('deleteBtn');
+  const errMsg = document.getElementById('errMsg');
+
+  function entryKey(dateISO, h, m){ return dateISO+'_'+pad(h)+':'+pad(m); }
+
+  function computeStatus(entry, dateObj, endH, endM){
+    if(entry.watched) return 'completed';
+    const now = new Date();
+    const end = new Date(dateObj); end.setHours(endH, endM, 0, 0);
+    if(now > end) return 'missed';
+    if(isoDate(dateObj)===isoDate(now)) return 'today-pending';
+    return 'scheduled';
+  }
+
+  // build a per-day occupancy map for the visible week: occ[dayIdx][slot] = {type:'start'|'cover', key}
+  function buildOccupancy(dayDates){
+    const occ = dayDates.map(()=> new Array(SLOT_COUNT).fill(null));
+    Object.keys(data).forEach(key=>{
+      const m = key.match(/^(\d{4}-\d{2}-\d{2})_(\d{2}):(\d{2})$/);
+      if(!m) return;
+      const dISO = m[1];
+      const dayIdx = dayDates.findIndex(d=> isoDate(d)===dISO);
+      if(dayIdx===-1) return;
+      const h = parseInt(m[2],10), mi = parseInt(m[3],10);
+      const startSlot = hmToSlot(h,mi);
+      const entry = data[key];
+      const span = Math.round((entry.durationMin||60)/30);
+      for(let s=startSlot; s<startSlot+span && s<SLOT_COUNT; s++){
+        occ[dayIdx][s] = (s===startSlot) ? {type:'start', key} : {type:'cover', key};
+      }
+    });
+    return occ;
+  }
+
+  function render(){
+    weekRangeEl.textContent = fmtRange(weekStart);
+    grid.innerHTML = '';
+    grid.style.gridTemplateRows = 'auto repeat(' + SLOT_COUNT + ', 29px)';
+
+    const corner = document.createElement('div');
+    corner.className = 'corner';
+    grid.appendChild(corner);
+
+    const todayISO = isoDate(new Date());
+    const dayDates = [];
+    for(let i=0;i<7;i++){
+      const d = addDays(weekStart, i);
+      dayDates.push(d);
+      const head = document.createElement('div');
+      head.className = 'day-head' + (isoDate(d)===todayISO ? ' is-today' : '');
+      head.style.gridColumn = String(i+2);
+      head.innerHTML = '<div class="dname">'+DAY_NAMES[i]+'</div><div class="ddate">'+fmtDateShort(d)+'</div>';
+      grid.appendChild(head);
+    }
+
+    // hour labels (span 2 rows each)
+    for(let h=START_HOUR; h<END_HOUR; h++){
+      const rowStart = 2 + (h-START_HOUR)*2;
+      const tc = document.createElement('div');
+      tc.className = 'time-cell';
+      tc.textContent = hourLabel(h);
+      tc.style.gridRow = rowStart + ' / span 2';
+      grid.appendChild(tc);
+    }
+
+    const occ = buildOccupancy(dayDates);
+    let total=0, done=0, missed=0;
+
+    dayDates.forEach((d, dayIdx)=>{
+      const dISO = isoDate(d);
+      for(let slot=0; slot<SLOT_COUNT; slot++){
+        const rowStart = 2 + slot;
+        const cellOcc = occ[dayIdx][slot];
+
+        if(!cellOcc){
+          const {h,m} = slotToHM(slot);
+          const cell = document.createElement('div');
+          cell.className = 'cell empty' + (slot%2===0 ? ' hour-start' : '');
+          cell.style.gridColumn = String(dayIdx+2);
+          cell.style.gridRow = String(rowStart);
+          cell.tabIndex = 0;
+          cell.addEventListener('click', ()=> openModal(dISO, h, m, d));
+          cell.addEventListener('keydown', ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openModal(dISO,h,m,d); } });
+          grid.appendChild(cell);
+        } else if(cellOcc.type==='start'){
+          const key = cellOcc.key;
+          const entry = data[key];
+          const m = key.match(/^(\d{4}-\d{2}-\d{2})_(\d{2}):(\d{2})$/);
+          const h = parseInt(m[2],10), mi = parseInt(m[3],10);
+          const span = Math.round((entry.durationMin||60)/30);
+          const endTotal = h*60+mi+(entry.durationMin||60);
+          const endH = Math.floor(endTotal/60), endM = endTotal%60;
+
+          total++;
+          const status = computeStatus(entry, d, endH, endM);
+          if(status==='completed') done++;
+          if(status==='missed') missed++;
+
+          const lec = document.createElement('div');
+          lec.className = 'lec subj-'+entry.subject + (status==='completed' ? ' completed' : '') + (status==='missed' ? ' missed' : '') + (status==='today-pending' ? ' today-pending' : '');
+          lec.style.gridColumn = String(dayIdx+2);
+          lec.style.gridRow = rowStart + ' / span ' + span;
+
+          const name = document.createElement('div');
+          name.className = 'lec-name';
+          name.textContent = entry.lecture;
+          lec.appendChild(name);
+
+          const timeTag = document.createElement('div');
+          timeTag.className = 'lec-time';
+          timeTag.textContent = timeLabel(h,mi) + '–' + timeLabel(endH,endM) + ' · ' + (entry.type==='recorded'?'Recorded':'Live');
+          lec.appendChild(timeTag);
+
+          const check = document.createElement('button');
+          check.className = 'check-btn';
+          check.setAttribute('aria-label','Mark watched');
+          check.textContent = '✓';
+          check.addEventListener('click', ev=>{
+            ev.stopPropagation();
+            entry.watched = !entry.watched;
+            persist(); render();
+          });
+          lec.appendChild(check);
+
+          if(status==='today-pending'){
+            const dot = document.createElement('div');
+            dot.className = 'pulse-dot';
+            lec.appendChild(dot);
+          }
+          if(status==='missed'){
+            const stamp = document.createElement('div');
+            stamp.className = 'stamp';
+            stamp.textContent = 'MISSED';
+            lec.appendChild(stamp);
+          }
+
+          lec.addEventListener('click', ()=> openModal(dISO, h, mi, d, key));
+          grid.appendChild(lec);
+        }
+        // 'cover' slots render nothing — the spanning .lec above already fills that grid area
+      }
+    });
+
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statDone').textContent = done;
+    document.getElementById('statMissed').textContent = missed;
+  }
+
+  function setDuration(mins){
+    activeDur = mins;
+    [...durRow.children].forEach(b=> b.classList.toggle('active', parseInt(b.dataset.d,10)===mins));
+    updateWhenText();
+  }
+
+  function updateWhenText(){
+    if(!modalCtx) return;
+    const endTotal = modalCtx.hour*60+modalCtx.minute+activeDur;
+    const endH = Math.floor(endTotal/60), endM = endTotal%60;
+    modalWhen.textContent = modalCtx.dayName+' · '+fmtDateShort(modalCtx.dateObj)+' · '+timeLabel(modalCtx.hour, modalCtx.minute)+' – '+timeLabel(endH, endM);
+  }
+
+  function openModal(dateISO, h, m, dateObj, existingKey){
+    const key = existingKey || entryKey(dateISO, h, m);
+    const existing = data[key] || null;
+    modalCtx = { key, dateISO, hour:h, minute:m, dateObj, dayName: dateObj.toLocaleDateString('en-IN',{weekday:'short'}) };
+
+    modalTitle.textContent = existing ? 'Edit lecture' : 'Add lecture';
+    lecInput.value = existing ? existing.lecture : '';
+    activeSubj = existing ? existing.subject : null;
+    activeType = existing ? existing.type : 'live';
+    errMsg.textContent = '';
+    deleteBtn.classList.toggle('hidden', !existing);
+
+    [...subjRow.children].forEach(b=> b.classList.toggle('active', b.dataset.s===activeSubj));
+    [...typeRow.children].forEach(b=> b.classList.toggle('active', b.dataset.t===activeType));
+    setDuration(existing ? (existing.durationMin||60) : 60);
+
+    overlay.classList.remove('hidden');
+    lecInput.focus();
+  }
+
+  function closeModal(){ overlay.classList.add('hidden'); modalCtx = null; }
+
+  subjRow.addEventListener('click', ev=>{
+    const btn = ev.target.closest('.subj-btn'); if(!btn) return;
+    activeSubj = btn.dataset.s;
+    [...subjRow.children].forEach(b=> b.classList.toggle('active', b===btn));
+  });
+  typeRow.addEventListener('click', ev=>{
+    const btn = ev.target.closest('.type-btn'); if(!btn) return;
+    activeType = btn.dataset.t;
+    [...typeRow.children].forEach(b=> b.classList.toggle('active', b===btn));
+  });
+  durRow.addEventListener('click', ev=>{
+    const btn = ev.target.closest('.dur-btn'); if(!btn) return;
+    setDuration(parseInt(btn.dataset.d,10));
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', function(){
+    if(!modalCtx) return;
+    const lecture = lecInput.value.trim();
+    errMsg.textContent = '';
+
+    if(!lecture){ lecInput.style.borderColor = 'var(--danger)'; errMsg.textContent = 'Enter a topic name.'; return; }
+    lecInput.style.borderColor = '';
+    if(!activeSubj){ errMsg.textContent = 'Pick a subject.'; return; }
+
+    const startSlot = hmToSlot(modalCtx.hour, modalCtx.minute);
+    const span = activeDur/30;
+    if(startSlot + span > SLOT_COUNT){
+      errMsg.textContent = 'That runs past 10 PM — pick an earlier start or shorter duration.';
+      return;
+    }
+
+    // overlap check against this day's occupancy, excluding the slot(s) owned by this same entry
+    const dayDates = [];
+    for(let i=0;i<7;i++) dayDates.push(addDays(weekStart,i));
+    const occ = buildOccupancy(dayDates);
+    const dayIdx = dayDates.findIndex(d=> isoDate(d)===modalCtx.dateISO);
+    for(let s=startSlot; s<startSlot+span; s++){
+      const o = occ[dayIdx] ? occ[dayIdx][s] : null;
+      if(o && o.key !== modalCtx.key){
+        errMsg.textContent = 'That overlaps another lecture already scheduled.';
+        return;
+      }
+    }
+
+    const existing = data[modalCtx.key];
+    data[modalCtx.key] = {
+      subject: activeSubj,
+      lecture: lecture,
+      type: activeType,
+      durationMin: activeDur,
+      watched: existing ? existing.watched : false
+    };
+    persist();
+    closeModal();
+    render();
+  });
+
+  deleteBtn.addEventListener('click', function(){
+    if(!modalCtx) return;
+    delete data[modalCtx.key];
+    persist(); closeModal(); render();
+  });
+
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) closeModal(); });
+  document.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && !overlay.classList.contains('hidden')) closeModal(); });
+
+  document.getElementById('prevWeek').addEventListener('click', ()=>{ weekStart = addDays(weekStart,-7); render(); });
+  document.getElementById('nextWeek').addEventListener('click', ()=>{ weekStart = addDays(weekStart,7); render(); });
+  document.getElementById('jumpToday').addEventListener('click', ()=>{ weekStart = getMonday(new Date()); render(); });
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'lecture-register-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  const fileInput = document.getElementById('fileInput');
+  document.getElementById('importBtn').addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', function(){
+    const file = fileInput.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{ data = JSON.parse(e.target.result); persist(); render(); }
+      catch(err){ alert('Could not read that file. Make sure it\'s a backup exported from this tool.'); }
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
+  });
+
+  setInterval(render, 60000);
+  render();
+})();
+</script>
+</body>
+</html>
