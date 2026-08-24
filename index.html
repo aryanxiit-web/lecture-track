@@ -38,6 +38,10 @@
     --due: #fb923c;
     --success: #34d399;
     --success-dim: rgba(52,211,153,0.10);
+
+    --ease: cubic-bezier(.16,1,.3,1);
+    --ease-pop: cubic-bezier(.34,1.56,.64,1);
+    --flip-duration: 480ms;
   }
 
   *{ box-sizing: border-box; }
@@ -47,7 +51,24 @@
     -webkit-font-smoothing: antialiased;
   }
   body{ min-height:100vh; padding: 28px 24px 60px; }
-  .app{ max-width: 1180px; margin: 0 auto; }
+  button{ position:relative; overflow:hidden; -webkit-tap-highlight-color:transparent; font-family:inherit; }
+
+  /* ---------- Ambient background ---------- */
+  .bg-aurora{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  .bg-aurora span{ position:absolute; border-radius:50%; filter: blur(90px); opacity:0.16; }
+  .bg-aurora span:nth-child(1){ width:520px; height:520px; background:var(--physics); top:-160px; left:-120px; animation: drift1 26s ease-in-out infinite alternate; }
+  .bg-aurora span:nth-child(2){ width:460px; height:460px; background:var(--maths); bottom:-180px; right:-100px; animation: drift2 32s ease-in-out infinite alternate; }
+  .bg-aurora span:nth-child(3){ width:380px; height:380px; background:var(--chemistry); top:38%; left:58%; animation: drift3 22s ease-in-out infinite alternate; }
+  @keyframes drift1{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(60px,40px) scale(1.15);} }
+  @keyframes drift2{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(-50px,-30px) scale(1.1);} }
+  @keyframes drift3{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(-40px,50px) scale(0.9);} }
+
+  .app{
+    position:relative; z-index:1; max-width: 1180px; margin: 0 auto;
+    opacity:0; transform: translateY(16px);
+    animation: pageIn .6s var(--ease) .05s forwards;
+  }
+  @keyframes pageIn{ to{ opacity:1; transform:translateY(0); } }
 
   /* ---------- Header ---------- */
   .masthead{
@@ -61,7 +82,12 @@
     text-transform: uppercase; color: var(--text-faint);
   }
   h1{ font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
-  h1 span{ color: var(--physics); }
+  h1 span{
+    background: linear-gradient(100deg, var(--physics), #b6f3ff, var(--physics));
+    background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 6s linear infinite;
+  }
+  @keyframes shimmer{ to{ background-position: -220% center; } }
 
   .week-nav{ display:flex; align-items:center; gap: 10px; }
   .week-range{ font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); min-width: 168px; text-align:center; }
@@ -69,10 +95,11 @@
     background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
     width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
     display:flex; align-items:center; justify-content:center; font-size: 15px;
-    transition: background .15s, border-color .15s;
+    transition: background .15s, border-color .15s, transform .12s;
   }
   .nav-btn:hover{ background: var(--surface-3); border-color: #343b49; }
-  .nav-btn:focus-visible, .today-btn:focus-visible, .cell:focus-visible, button:focus-visible, input:focus-visible{
+  .nav-btn:active{ transform: scale(.92); }
+  .nav-btn:focus-visible, .today-btn:focus-visible, .cell:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{
     outline: 2px solid var(--physics); outline-offset: 2px;
   }
   .today-btn{
@@ -83,7 +110,7 @@
   .today-btn:hover{ color: var(--text); border-color: var(--physics); }
 
   /* ---------- Legend + Stats ---------- */
-  .info-row{ display:flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; align-items: stretch; }
+  .info-row{ display:flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; align-items: stretch; }
   .legend{
     display:flex; gap: 16px; flex-wrap: wrap; align-items:center;
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -101,13 +128,39 @@
   .stat-card.missed .stat-num{ color: var(--danger); }
   .stat-card.done .stat-num{ color: var(--success); }
 
+  /* ---------- Subject breakdown ---------- */
+  .breakdown{ background: var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom: 22px; }
+  .breakdown-title{ font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin-bottom:12px; }
+  .breakdown-empty{ font-size:12.5px; color:var(--text-faint); }
+  .breakdown-row{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .breakdown-row:last-child{ margin-bottom:0; }
+  .breakdown-name{ width:100px; flex-shrink:0; font-size:12px; color:var(--text-dim); display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .breakdown-name .swatch{ flex-shrink:0; }
+  .breakdown-bar-track{ flex:1; height:8px; background: var(--surface-2); border-radius:5px; overflow:hidden; }
+  .breakdown-bar-fill{ height:100%; border-radius:5px; width:0%; transition: width .8s var(--ease); }
+  .breakdown-count{ width:54px; flex-shrink:0; text-align:right; font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-faint); }
+
   /* ---------- Grid ---------- */
-  .grid-scroll{ overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  .grid-flip-stage{ perspective: 1400px; }
+  .grid-scroll{
+    overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+    transform-style: preserve-3d; will-change: transform, opacity;
+  }
+  .grid-scroll.flip-exit-next{ animation: flipExitNext var(--flip-duration) var(--ease) forwards; }
+  .grid-scroll.flip-exit-prev{ animation: flipExitPrev var(--flip-duration) var(--ease) forwards; }
+  .grid-scroll.flip-enter-next{ animation: flipEnterNext var(--flip-duration) var(--ease) forwards; }
+  .grid-scroll.flip-enter-prev{ animation: flipEnterPrev var(--flip-duration) var(--ease) forwards; }
+  @keyframes flipExitNext{ to{ transform: rotateY(-16deg) translateX(-40px) translateZ(-120px); opacity:0; } }
+  @keyframes flipExitPrev{ to{ transform: rotateY(16deg) translateX(40px) translateZ(-120px); opacity:0; } }
+  @keyframes flipEnterNext{ from{ transform: rotateY(16deg) translateX(40px) translateZ(-120px); opacity:0; } to{ transform:none; opacity:1; } }
+  @keyframes flipEnterPrev{ from{ transform: rotateY(-16deg) translateX(-40px) translateZ(-120px); opacity:0; } to{ transform:none; opacity:1; } }
+
   .grid{
     display: grid;
     grid-template-columns: 96px repeat(7, minmax(122px, 1fr));
     grid-auto-rows: 29px;
     min-width: 980px;
+    position: relative;
   }
   .corner, .day-head{
     position: sticky; top:0; z-index: 5;
@@ -133,7 +186,7 @@
 
   .cell{
     border-bottom: 1px solid var(--border-soft); border-left: 1px solid var(--border-soft);
-    padding: 3px 6px; cursor: pointer; position: relative;
+    padding: 3px 6px; cursor: pointer; position: relative; overflow:hidden;
   }
   .cell.hour-start{ border-top: 1px solid var(--border-hour); }
   .cell.empty:hover{ background: var(--surface-2); }
@@ -145,15 +198,25 @@
 
   .lec{
     height: 100%; width:100%; border-radius: 8px; padding: 6px 8px; font-size: 12px;
-    border-left: 3px solid transparent; position:relative; cursor:pointer;
+    border-left: 3px solid var(--subj-color, #666); background: var(--subj-dim, rgba(255,255,255,0.05));
+    position:relative; cursor:pointer;
     display:flex; flex-direction:column; overflow:hidden;
+    transform-style: preserve-3d;
+    transition: transform .18s var(--ease), box-shadow .18s var(--ease);
   }
+  .lec::before{
+    content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background: radial-gradient(120px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.12), transparent 60%);
+    opacity:0; transition: opacity .2s;
+  }
+  .lec.tilt-hover::before{ opacity:1; }
+  .lec.tilt-hover{ box-shadow: 0 12px 26px -8px rgba(0,0,0,0.55); z-index:3; }
+  .lec.pressed{ transform: scale(1.045) translateZ(6px); box-shadow: 0 10px 24px -6px rgba(0,0,0,0.55); z-index:3; }
+  .lec.card-in{ animation: cardIn .46s var(--ease) backwards; }
+  @keyframes cardIn{ from{ opacity:0; transform: translateY(10px) rotateX(-10deg) scale(.94);} to{ opacity:1; transform:none;} }
+
   .lec-name{ font-weight:600; line-height:1.25; word-break: break-word; }
   .lec-time{ font-family:'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint); margin-top:auto; padding-top:3px; text-transform:uppercase; letter-spacing:.03em; }
-
-  .lec.subj-physics{ background: var(--physics-dim); border-left-color: var(--physics); }
-  .lec.subj-chemistry{ background: var(--chemistry-dim); border-left-color: var(--chemistry); }
-  .lec.subj-maths{ background: var(--maths-dim); border-left-color: var(--maths); }
 
   .lec.completed{ opacity: 0.5; }
   .lec.completed .lec-name{ text-decoration: line-through; text-decoration-color: var(--text-faint); }
@@ -165,13 +228,29 @@
   }
   @keyframes pulse{ 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:.4; transform:scale(1.3);} }
 
+  .note-flag{ position:absolute; bottom:5px; left:6px; width:13px; height:13px; color: var(--text-faint); opacity:.85; }
+  .note-flag svg{ width:100%; height:100%; display:block; }
+
+  .now-line{ position:relative; height:2px; background: linear-gradient(90deg, var(--due), transparent 85%); border-radius:2px; pointer-events:none; z-index:3; }
+  .now-line::before{
+    content:''; position:absolute; left:-3px; top:-3px; width:8px; height:8px; border-radius:50%;
+    background:var(--due); box-shadow:0 0 8px 2px rgba(251,146,60,.7); animation: pulse 1.8s ease-in-out infinite;
+  }
+
   .check-btn{
     position:absolute; top:5px; right:5px; width:19px; height:19px; border-radius:6px;
     border: 1.5px solid var(--text-faint); background: var(--surface); cursor:pointer;
     display:flex; align-items:center; justify-content:center; padding:0; color: transparent; font-size: 12px; line-height:1;
+    transition: transform .15s var(--ease-pop);
   }
   .lec.completed .check-btn{ border-color: var(--success); background: var(--success-dim); color: var(--success); }
   .check-btn:hover{ border-color: var(--success); }
+  .check-btn:active{ transform: scale(.85); }
+  .check-btn.burst::after{
+    content:''; position:absolute; inset:-6px; border-radius:50%; border:2px solid var(--success);
+    animation: burstRing .5s ease-out forwards;
+  }
+  @keyframes burstRing{ from{ opacity:1; transform:scale(.4);} to{ opacity:0; transform:scale(2.1);} }
 
   .lec.missed{ border-left-color: var(--danger); box-shadow: inset 0 0 0 1px rgba(239,68,68,0.35); }
   .stamp{
@@ -180,37 +259,48 @@
     padding: 1px 5px; border-radius: 3px; transform: rotate(-6deg); opacity:0.9; background: rgba(239,68,68,0.07);
   }
 
-  @media (prefers-reduced-motion: reduce){ .pulse-dot{ animation: none; } }
+  .ripple{ position:absolute; border-radius:50%; background: rgba(255,255,255,0.32); transform:scale(0); animation: rippleAnim .5s ease-out forwards; pointer-events:none; }
+  @keyframes rippleAnim{ to{ transform:scale(2.6); opacity:0; } }
 
   /* ---------- Modal ---------- */
   .overlay{
     position: fixed; inset:0; background: rgba(4,5,8,0.72); backdrop-filter: blur(2px);
     display:flex; align-items:center; justify-content:center; z-index: 50; padding: 20px;
+    perspective: 1000px; opacity:0; visibility:hidden;
+    transition: opacity .25s ease, visibility 0s linear .25s;
   }
-  .overlay.hidden{ display:none; }
-  .modal{ background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 380px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .overlay.open{ opacity:1; visibility:visible; transition: opacity .25s ease; }
+  .modal{
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 380px; padding: 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); transform-origin: center bottom;
+    transform: scale(.86) rotateX(10deg) translateY(14px); opacity:0;
+    transition: transform .34s var(--ease-pop), opacity .28s ease;
+  }
+  .overlay.open .modal{ transform:none; opacity:1; }
   .modal-when{ font-family:'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-faint); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
   .modal h2{ font-family:'Space Grotesk', sans-serif; font-size: 17px; margin: 0 0 18px; }
   .field-label{ font-size: 11.5px; color: var(--text-dim); margin-bottom: 7px; display:block; font-weight:500; }
-  .subj-row{ display:flex; gap: 8px; margin-bottom: 16px; }
+  .subj-row{ display:flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   .subj-btn{
-    flex:1; border-radius: 9px; padding: 9px 4px; cursor:pointer; font-size: 12.5px; font-weight:600;
+    flex: 1 1 28%; min-width: 76px; border-radius: 9px; padding: 9px 4px; cursor:pointer; font-size: 12.5px; font-weight:600;
     background: var(--surface-2); border: 1.5px solid var(--border); color: var(--text-dim);
     transition: all .12s; display:flex; flex-direction:column; align-items:center; gap:5px;
   }
-  .subj-btn .dot{ width:9px; height:9px; border-radius:50%; }
-  .subj-btn[data-s="physics"] .dot{ background: var(--physics); }
-  .subj-btn[data-s="chemistry"] .dot{ background: var(--chemistry); }
-  .subj-btn[data-s="maths"] .dot{ background: var(--maths); }
-  .subj-btn.active[data-s="physics"]{ border-color: var(--physics); color: var(--physics); background: var(--physics-dim); }
-  .subj-btn.active[data-s="chemistry"]{ border-color: var(--chemistry); color: var(--chemistry); background: var(--chemistry-dim); }
-  .subj-btn.active[data-s="maths"]{ border-color: var(--maths); color: var(--maths); background: var(--maths-dim); }
+  .subj-btn .dot{ width:9px; height:9px; border-radius:50%; background: var(--subj-color); }
+  .subj-btn.active{ border-color: var(--subj-color); color: var(--subj-color); background: var(--subj-dim); }
+  .subj-add-btn{
+    flex: 1 1 28%; min-width: 76px; border-radius: 9px; padding: 9px 4px; cursor:pointer; font-size: 12.5px; font-weight:600;
+    background: transparent; border: 1.5px dashed var(--border-hour); color: var(--text-faint);
+    display:flex; align-items:center; justify-content:center; gap:4px; transition: all .15s;
+  }
+  .subj-add-btn:hover{ color: var(--text-dim); border-color: var(--text-dim); background: var(--surface-2); }
 
   .text-input{
     width:100%; background: var(--surface-2); border: 1.5px solid var(--border); color: var(--text);
     border-radius: 9px; padding: 10px 12px; font-size: 13.5px; font-family:'Inter',sans-serif; margin-bottom: 16px;
   }
   .text-input:focus{ border-color: var(--physics); outline:none; }
+  textarea.text-input{ resize: vertical; min-height: 52px; line-height:1.4; }
 
   .dur-row{ display:flex; gap:8px; margin-bottom: 6px; }
   .dur-btn{ flex:1; border-radius:9px; padding: 8px 4px; cursor:pointer; font-size:12.5px; font-weight:600; background: var(--surface-2); border: 1.5px solid var(--border); color: var(--text-dim); }
@@ -229,8 +319,21 @@
   .btn-delete{ background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,0.35); }
   .hidden{ display:none !important; }
 
+  /* ---------- Subjects modal ---------- */
+  .subj-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:16px; max-height:190px; overflow-y:auto; }
+  .subj-list-row{ display:flex; align-items:center; gap:10px; padding:7px 9px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border); }
+  .subj-list-row .dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .subj-list-row .nm{ flex:1; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .subj-list-row .tag{ font-size:9.5px; color:var(--text-faint); font-family:'JetBrains Mono', monospace; text-transform:uppercase; }
+  .subj-list-row .rm{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:16px; line-height:1; padding:2px 5px; }
+  .subj-list-row .rm:hover{ color:var(--danger); }
+  .color-picker{ display:flex; gap:9px; flex-wrap:wrap; margin-bottom:16px; }
+  .color-swatch{ width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition: transform .12s; }
+  .color-swatch:hover{ transform: scale(1.15); }
+  .color-swatch.picked{ box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px currentColor; }
+
   footer{ text-align:center; margin-top: 26px; font-size: 11.5px; color: var(--text-faint); font-family:'JetBrains Mono', monospace; }
-  .foot-actions{ display:flex; gap:14px; justify-content:center; margin-top:8px; }
+  .foot-actions{ display:flex; gap:14px; justify-content:center; margin-top:8px; flex-wrap:wrap; }
   .foot-actions button{ background:none; border:none; color: var(--text-faint); text-decoration: underline; cursor:pointer; font-family: inherit; font-size: 11.5px; }
   .foot-actions button:hover{ color: var(--text-dim); }
 
@@ -239,9 +342,21 @@
     .masthead{ flex-direction:column; align-items:flex-start; }
     h1{ font-size: 21px; }
   }
+
+  @media (prefers-reduced-motion: reduce){
+    .app{ animation:none; opacity:1; transform:none; }
+    h1 span{ animation:none; -webkit-text-fill-color: var(--physics); background:none; }
+    .bg-aurora span{ animation:none; }
+    .grid-scroll{ animation:none !important; transform:none !important; }
+    .lec.card-in{ animation:none; }
+    .lec{ transition:none; }
+    .pulse-dot, .now-line::before{ animation:none; }
+    .ripple{ display:none; }
+  }
 </style>
 </head>
 <body>
+<div class="bg-aurora"><span></span><span></span><span></span></div>
 <div class="app">
 
   <div class="masthead">
@@ -259,11 +374,7 @@
 
   <div class="info-row">
     <div class="legend">
-      <div class="legend-group">
-        <div class="legend-item"><span class="swatch" style="background:var(--physics)"></span>Physics</div>
-        <div class="legend-item"><span class="swatch" style="background:var(--chemistry)"></span>Chemistry</div>
-        <div class="legend-item"><span class="swatch" style="background:var(--maths)"></span>Maths</div>
-      </div>
+      <div class="legend-group" id="legendSubjects"><!-- built by JS --></div>
       <div class="legend-sep"></div>
       <div class="legend-group">
         <div class="legend-item"><span class="swatch" style="background:var(--due)"></span>Due today</div>
@@ -278,8 +389,12 @@
     </div>
   </div>
 
-  <div class="grid-scroll">
-    <div class="grid" id="grid"><!-- built by JS --></div>
+  <div class="breakdown" id="breakdown"><!-- built by JS --></div>
+
+  <div class="grid-flip-stage">
+    <div class="grid-scroll" id="gridScroll">
+      <div class="grid" id="grid"><!-- built by JS --></div>
+    </div>
   </div>
 
   <footer>
@@ -287,24 +402,24 @@
     <div class="foot-actions">
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import backup</button>
+      <button id="manageSubjBtn">Manage subjects</button>
     </div>
   </footer>
 </div>
 
-<div class="overlay hidden" id="overlay">
+<div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-when" id="modalWhen">Mon · 9:00 AM</div>
     <h2 id="modalTitle">Add lecture</h2>
 
     <span class="field-label">Subject</span>
-    <div class="subj-row" id="subjRow">
-      <button class="subj-btn" data-s="physics"><span class="dot"></span>Physics</button>
-      <button class="subj-btn" data-s="chemistry"><span class="dot"></span>Chem</button>
-      <button class="subj-btn" data-s="maths"><span class="dot"></span>Maths</button>
-    </div>
+    <div class="subj-row" id="subjRow"><!-- built by JS --></div>
 
     <span class="field-label">Topic / lecture name</span>
     <input class="text-input" id="lecInput" type="text" placeholder="e.g. Rotational Motion – L14" maxlength="60">
+
+    <span class="field-label">Notes (optional)</span>
+    <textarea class="text-input notes-input" id="notesInput" rows="2" maxlength="300" placeholder="Doubts, formulas to revisit, homework..."></textarea>
 
     <span class="field-label">Duration</span>
     <div class="dur-row" id="durRow">
@@ -327,6 +442,20 @@
   </div>
 </div>
 
+<div class="overlay" id="subjOverlay">
+  <div class="modal">
+    <h2>Subjects</h2>
+    <div class="subj-list" id="subjList"><!-- built by JS --></div>
+    <span class="field-label">Add a subject</span>
+    <input class="text-input" id="newSubjName" type="text" placeholder="e.g. Biology" maxlength="24">
+    <div class="color-picker" id="colorPicker"><!-- built by JS --></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="subjCloseBtn">Done</button>
+      <button class="btn btn-save" id="addSubjBtn">Add subject</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="fileInput" accept="application/json" style="display:none">
 
 <script>
@@ -336,6 +465,17 @@
   const SLOT_COUNT = (END_HOUR - START_HOUR) * 2; // 30-min slots
   const DAY_NAMES = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
   const STORE_KEY = 'lectureRegisterData_v2';
+  const SUBJ_KEY = 'lectureRegisterSubjects_v1';
+
+  const BUILTIN_SUBJECTS = [
+    { id:'physics',   name:'Physics',   color:'#22d3ee' },
+    { id:'chemistry', name:'Chemistry', color:'#f5a623' },
+    { id:'maths',     name:'Maths',     color:'#e94ff5' }
+  ];
+  const SUBJECT_PALETTE = ['#818cf8','#2dd4bf','#fb7185','#a3e635','#38bdf8','#c084fc','#facc15','#f472b6'];
+
+  const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const FINE_POINTER = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   function pad(n){ return n<10 ? '0'+n : ''+n; }
   function isoDate(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
@@ -366,6 +506,44 @@
   }
   function slotToHM(slot){ return { h: START_HOUR + Math.floor(slot/2), m: (slot%2)*30 }; }
   function hmToSlot(h,m){ return (h-START_HOUR)*2 + (m>=30?1:0); }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function hexToRgba(hex, a){
+    let h = (hex || '#7c8398').replace('#','');
+    if(h.length===3) h = h.split('').map(function(c){ return c+c; }).join('');
+    const n = parseInt(h,16);
+    const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    return 'rgba('+r+','+g+','+b+','+a+')';
+  }
+
+  /* ---------- Subjects (built-in + custom) ---------- */
+  let customSubjects = [];
+  try{ customSubjects = JSON.parse(localStorage.getItem(SUBJ_KEY) || '[]'); }catch(e){ customSubjects = []; }
+  if(!Array.isArray(customSubjects)) customSubjects = [];
+
+  function saveSubjects(){ try{ localStorage.setItem(SUBJ_KEY, JSON.stringify(customSubjects)); }catch(e){} }
+  function allSubjects(){ return BUILTIN_SUBJECTS.concat(customSubjects); }
+  function getSubject(id){
+    return allSubjects().find(function(s){ return s.id===id; }) || { id: id||'unknown', name:'Other', color:'#7c8398' };
+  }
+  function nextPaletteColor(){
+    const used = allSubjects().map(function(s){ return s.color.toLowerCase(); });
+    const free = SUBJECT_PALETTE.find(function(c){ return used.indexOf(c.toLowerCase())===-1; });
+    return free || SUBJECT_PALETTE[customSubjects.length % SUBJECT_PALETTE.length];
+  }
+  function addSubject(name, color){
+    const id = 'c_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    customSubjects.push({ id: id, name: name.slice(0,24), color: color });
+    saveSubjects();
+    return id;
+  }
+  function removeSubject(id){
+    customSubjects = customSubjects.filter(function(s){ return s.id!==id; });
+    saveSubjects();
+  }
 
   let data = {};
   try{ data = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ data = {}; }
@@ -375,7 +553,7 @@
     try{
       const old = JSON.parse(localStorage.getItem('lectureRegisterData_v1') || 'null');
       if(old && Object.keys(data).length===0){
-        Object.keys(old).forEach(k=>{
+        Object.keys(old).forEach(function(k){
           const m = k.match(/^(\d{4}-\d{2}-\d{2})_(\d{1,2})$/);
           if(m){
             const newKey = m[1]+'_'+pad(parseInt(m[2],10))+':00';
@@ -387,25 +565,29 @@
     }catch(e){}
   })();
 
-  function persist(){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+  function persist(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }catch(e){} }
 
   let weekStart = getMonday(new Date());
   let modalCtx = null;
   let activeSubj = null;
   let activeType = 'live';
   let activeDur = 60;
+  let pickedColor = null;
 
   const grid = document.getElementById('grid');
+  const gridScroll = document.getElementById('gridScroll');
   const weekRangeEl = document.getElementById('weekRange');
   const overlay = document.getElementById('overlay');
   const modalWhen = document.getElementById('modalWhen');
   const modalTitle = document.getElementById('modalTitle');
   const lecInput = document.getElementById('lecInput');
+  const notesInput = document.getElementById('notesInput');
   const subjRow = document.getElementById('subjRow');
   const typeRow = document.getElementById('typeRow');
   const durRow = document.getElementById('durRow');
   const deleteBtn = document.getElementById('deleteBtn');
   const errMsg = document.getElementById('errMsg');
+  const subjOverlay = document.getElementById('subjOverlay');
 
   function entryKey(dateISO, h, m){ return dateISO+'_'+pad(h)+':'+pad(m); }
 
@@ -420,25 +602,159 @@
 
   // build a per-day occupancy map for the visible week: occ[dayIdx][slot] = {type:'start'|'cover', key}
   function buildOccupancy(dayDates){
-    const occ = dayDates.map(()=> new Array(SLOT_COUNT).fill(null));
-    Object.keys(data).forEach(key=>{
+    const occ = dayDates.map(function(){ return new Array(SLOT_COUNT).fill(null); });
+    Object.keys(data).forEach(function(key){
       const m = key.match(/^(\d{4}-\d{2}-\d{2})_(\d{2}):(\d{2})$/);
       if(!m) return;
       const dISO = m[1];
-      const dayIdx = dayDates.findIndex(d=> isoDate(d)===dISO);
+      const dayIdx = dayDates.findIndex(function(d){ return isoDate(d)===dISO; });
       if(dayIdx===-1) return;
       const h = parseInt(m[2],10), mi = parseInt(m[3],10);
       const startSlot = hmToSlot(h,mi);
       const entry = data[key];
       const span = Math.round((entry.durationMin||60)/30);
       for(let s=startSlot; s<startSlot+span && s<SLOT_COUNT; s++){
-        occ[dayIdx][s] = (s===startSlot) ? {type:'start', key} : {type:'cover', key};
+        occ[dayIdx][s] = (s===startSlot) ? {type:'start', key:key} : {type:'cover', key:key};
       }
     });
     return occ;
   }
 
-  function render(){
+  function computeBreakdown(dayDates){
+    const startISO = isoDate(dayDates[0]), endISO = isoDate(dayDates[6]);
+    const map = {};
+    Object.keys(data).forEach(function(key){
+      const m = key.match(/^(\d{4}-\d{2}-\d{2})_(\d{2}):(\d{2})$/);
+      if(!m) return;
+      const dISO = m[1];
+      if(dISO < startISO || dISO > endISO) return;
+      const dayIdx = dayDates.findIndex(function(d){ return isoDate(d)===dISO; });
+      if(dayIdx===-1) return;
+      const dateObj = dayDates[dayIdx];
+      const entry = data[key];
+      const h = parseInt(m[2],10), mi = parseInt(m[3],10);
+      const endTotal = h*60+mi+(entry.durationMin||60);
+      const endH = Math.floor(endTotal/60), endM = endTotal%60;
+      const status = computeStatus(entry, dateObj, endH, endM);
+      const sid = entry.subject;
+      if(!map[sid]) map[sid] = {total:0, watched:0, missed:0};
+      map[sid].total++;
+      if(status==='completed') map[sid].watched++;
+      if(status==='missed') map[sid].missed++;
+    });
+    return map;
+  }
+
+  function renderLegend(){
+    const el = document.getElementById('legendSubjects');
+    el.innerHTML = allSubjects().map(function(s){
+      return '<div class="legend-item"><span class="swatch" style="background:'+s.color+'"></span>'+escapeHtml(s.name)+'</div>';
+    }).join('');
+  }
+
+  function renderBreakdown(map){
+    const el = document.getElementById('breakdown');
+    const ids = Object.keys(map).filter(function(id){ return map[id].total>0; });
+    if(ids.length===0){
+      el.innerHTML = '<div class="breakdown-title">Subject breakdown</div><div class="breakdown-empty">No lectures logged this week yet.</div>';
+      return;
+    }
+    ids.sort(function(a,b){
+      const ai = BUILTIN_SUBJECTS.findIndex(function(s){ return s.id===a; });
+      const bi = BUILTIN_SUBJECTS.findIndex(function(s){ return s.id===b; });
+      if(ai!==-1 && bi!==-1) return ai-bi;
+      if(ai!==-1) return -1;
+      if(bi!==-1) return 1;
+      return map[b].total - map[a].total;
+    });
+    let html = '<div class="breakdown-title">Subject breakdown</div>';
+    ids.forEach(function(id){
+      const subj = getSubject(id);
+      const c = map[id];
+      const pct = c.total ? Math.round((c.watched/c.total)*100) : 0;
+      html += '<div class="breakdown-row">'
+        + '<div class="breakdown-name"><span class="swatch" style="background:'+subj.color+'"></span>'+escapeHtml(subj.name)+'</div>'
+        + '<div class="breakdown-bar-track"><div class="breakdown-bar-fill" data-pct="'+pct+'" style="background:'+subj.color+'"></div></div>'
+        + '<div class="breakdown-count">'+c.watched+'/'+c.total+'</div>'
+        + '</div>';
+    });
+    el.innerHTML = html;
+    requestAnimationFrame(function(){
+      el.querySelectorAll('.breakdown-bar-fill').forEach(function(fill){
+        fill.style.width = fill.dataset.pct + '%';
+      });
+    });
+  }
+
+  function animateCount(el, to){
+    if(REDUCED_MOTION){ el.textContent = to; return; }
+    const from = parseInt(el.textContent,10) || 0;
+    if(from===to){ el.textContent = to; return; }
+    const dur = 420; const start = performance.now();
+    function step(now){
+      const p = Math.min(1, (now-start)/dur);
+      const eased = 1 - Math.pow(1-p, 3);
+      const val = Math.round(from + (to-from)*eased);
+      el.textContent = val;
+      if(p<1) requestAnimationFrame(step);
+      else el.textContent = to;
+    }
+    requestAnimationFrame(step);
+  }
+
+  function handleTilt(ev){
+    const lec = ev.currentTarget;
+    const rect = lec.getBoundingClientRect();
+    const px = (ev.clientX-rect.left)/rect.width, py = (ev.clientY-rect.top)/rect.height;
+    const rx = (0.5-py)*12, ry = (px-0.5)*12;
+    lec.style.transform = 'perspective(600px) rotateX('+rx.toFixed(2)+'deg) rotateY('+ry.toFixed(2)+'deg) translateZ(4px)';
+    lec.style.setProperty('--mx', (px*100)+'%');
+    lec.style.setProperty('--my', (py*100)+'%');
+    lec.classList.add('tilt-hover');
+  }
+  function clearTilt(ev){
+    const lec = ev.currentTarget;
+    lec.style.transform = '';
+    lec.classList.remove('tilt-hover');
+  }
+
+  function spawnRipple(el, clientX, clientY){
+    if(REDUCED_MOTION) return;
+    const rect = el.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 1.4;
+    const span = document.createElement('span');
+    span.className = 'ripple';
+    span.style.width = span.style.height = size+'px';
+    span.style.left = (clientX - rect.left - size/2)+'px';
+    span.style.top = (clientY - rect.top - size/2)+'px';
+    el.appendChild(span);
+    span.addEventListener('animationend', function(){ span.remove(); });
+  }
+  document.addEventListener('pointerdown', function(ev){
+    const el = ev.target.closest('button, .cell, .lec');
+    if(!el) return;
+    spawnRipple(el, ev.clientX, ev.clientY);
+  });
+
+  function renderNowLine(dayDates, todayISO){
+    const idx = dayDates.findIndex(function(d){ return isoDate(d)===todayISO; });
+    if(idx===-1) return;
+    const now = new Date();
+    const h = now.getHours(), mi = now.getMinutes();
+    if(h < START_HOUR || h >= END_HOUR) return;
+    const slot = hmToSlot(h, mi - (mi%30));
+    const rowStart = 2 + slot;
+    const fraction = (mi%30)/30;
+    const line = document.createElement('div');
+    line.className = 'now-line';
+    line.style.gridColumn = String(idx+2);
+    line.style.gridRow = String(rowStart);
+    line.style.transform = 'translateY('+(fraction*29)+'px)';
+    grid.appendChild(line);
+  }
+
+  function render(animateCards){
+    renderLegend();
     weekRangeEl.textContent = fmtRange(weekStart);
     grid.innerHTML = '';
     grid.style.gridTemplateRows = 'auto repeat(' + SLOT_COUNT + ', 29px)';
@@ -470,23 +786,24 @@
     }
 
     const occ = buildOccupancy(dayDates);
-    let total=0, done=0, missed=0;
+    let total=0, done=0, missed=0, cardIdx=0;
 
-    dayDates.forEach((d, dayIdx)=>{
+    dayDates.forEach(function(d, dayIdx){
       const dISO = isoDate(d);
       for(let slot=0; slot<SLOT_COUNT; slot++){
         const rowStart = 2 + slot;
         const cellOcc = occ[dayIdx][slot];
 
         if(!cellOcc){
-          const {h,m} = slotToHM(slot);
+          const hm = slotToHM(slot);
+          const h = hm.h, m = hm.m;
           const cell = document.createElement('div');
           cell.className = 'cell empty' + (slot%2===0 ? ' hour-start' : '');
           cell.style.gridColumn = String(dayIdx+2);
           cell.style.gridRow = String(rowStart);
           cell.tabIndex = 0;
-          cell.addEventListener('click', ()=> openModal(dISO, h, m, d));
-          cell.addEventListener('keydown', ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openModal(dISO,h,m,d); } });
+          cell.addEventListener('click', function(){ openModal(dISO, h, m, d); });
+          cell.addEventListener('keydown', function(ev){ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openModal(dISO,h,m,d); } });
           grid.appendChild(cell);
         } else if(cellOcc.type==='start'){
           const key = cellOcc.key;
@@ -502,10 +819,18 @@
           if(status==='completed') done++;
           if(status==='missed') missed++;
 
+          const subj = getSubject(entry.subject);
           const lec = document.createElement('div');
-          lec.className = 'lec subj-'+entry.subject + (status==='completed' ? ' completed' : '') + (status==='missed' ? ' missed' : '') + (status==='today-pending' ? ' today-pending' : '');
+          lec.className = 'lec' + (status==='completed' ? ' completed' : '') + (status==='missed' ? ' missed' : '') + (status==='today-pending' ? ' today-pending' : '');
+          lec.style.setProperty('--subj-color', subj.color);
+          lec.style.setProperty('--subj-dim', hexToRgba(subj.color, 0.14));
           lec.style.gridColumn = String(dayIdx+2);
           lec.style.gridRow = rowStart + ' / span ' + span;
+          if(animateCards && !REDUCED_MOTION){
+            lec.classList.add('card-in');
+            lec.style.animationDelay = (cardIdx*26)+'ms';
+            cardIdx++;
+          }
 
           const name = document.createElement('div');
           name.className = 'lec-name';
@@ -521,12 +846,27 @@
           check.className = 'check-btn';
           check.setAttribute('aria-label','Mark watched');
           check.textContent = '✓';
-          check.addEventListener('click', ev=>{
+          check.addEventListener('click', function(ev){
             ev.stopPropagation();
-            entry.watched = !entry.watched;
-            persist(); render();
+            const willWatch = !entry.watched;
+            entry.watched = willWatch;
+            persist();
+            if(willWatch && !REDUCED_MOTION){
+              check.classList.add('burst');
+              setTimeout(function(){ render(false); }, 260);
+            } else {
+              render(false);
+            }
           });
           lec.appendChild(check);
+
+          if(entry.notes){
+            const flag = document.createElement('div');
+            flag.className = 'note-flag';
+            flag.title = entry.notes;
+            flag.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H9l-5 4V4z"/></svg>';
+            lec.appendChild(flag);
+          }
 
           if(status==='today-pending'){
             const dot = document.createElement('div');
@@ -540,21 +880,56 @@
             lec.appendChild(stamp);
           }
 
-          lec.addEventListener('click', ()=> openModal(dISO, h, mi, d, key));
+          if(FINE_POINTER && !REDUCED_MOTION){
+            lec.addEventListener('pointermove', handleTilt);
+            lec.addEventListener('pointerleave', clearTilt);
+          } else {
+            lec.addEventListener('touchstart', function(){ lec.classList.add('pressed'); }, {passive:true});
+            lec.addEventListener('touchend', function(){ lec.classList.remove('pressed'); });
+            lec.addEventListener('touchcancel', function(){ lec.classList.remove('pressed'); });
+          }
+
+          lec.addEventListener('click', function(){ openModal(dISO, h, mi, d, key); });
           grid.appendChild(lec);
         }
         // 'cover' slots render nothing — the spanning .lec above already fills that grid area
       }
     });
 
-    document.getElementById('statTotal').textContent = total;
-    document.getElementById('statDone').textContent = done;
-    document.getElementById('statMissed').textContent = missed;
+    renderNowLine(dayDates, todayISO);
+
+    animateCount(document.getElementById('statTotal'), total);
+    animateCount(document.getElementById('statDone'), done);
+    animateCount(document.getElementById('statMissed'), missed);
+
+    renderBreakdown(computeBreakdown(dayDates));
+  }
+
+  function flipWeek(direction){
+    if(REDUCED_MOTION){
+      weekStart = addDays(weekStart, direction*7);
+      render(true);
+      return;
+    }
+    const exitClass = direction===1 ? 'flip-exit-next' : 'flip-exit-prev';
+    const enterClass = direction===1 ? 'flip-enter-next' : 'flip-enter-prev';
+    gridScroll.classList.add(exitClass);
+    gridScroll.addEventListener('animationend', function onExit(){
+      gridScroll.removeEventListener('animationend', onExit);
+      gridScroll.classList.remove(exitClass);
+      weekStart = addDays(weekStart, direction*7);
+      render(true);
+      gridScroll.classList.add(enterClass);
+      gridScroll.addEventListener('animationend', function onEnter(){
+        gridScroll.removeEventListener('animationend', onEnter);
+        gridScroll.classList.remove(enterClass);
+      }, {once:true});
+    }, {once:true});
   }
 
   function setDuration(mins){
     activeDur = mins;
-    [...durRow.children].forEach(b=> b.classList.toggle('active', parseInt(b.dataset.d,10)===mins));
+    [...durRow.children].forEach(function(b){ b.classList.toggle('active', parseInt(b.dataset.d,10)===mins); });
     updateWhenText();
   }
 
@@ -565,39 +940,87 @@
     modalWhen.textContent = modalCtx.dayName+' · '+fmtDateShort(modalCtx.dateObj)+' · '+timeLabel(modalCtx.hour, modalCtx.minute)+' – '+timeLabel(endH, endM);
   }
 
+  function renderSubjRow(){
+    subjRow.innerHTML = allSubjects().map(function(s){
+      return '<button type="button" class="subj-btn" data-s="'+s.id+'" style="--subj-color:'+s.color+'; --subj-dim:'+hexToRgba(s.color,0.14)+';"><span class="dot"></span>'+escapeHtml(s.name)+'</button>';
+    }).join('') + '<button type="button" class="subj-add-btn" id="subjAddInline">+ Add</button>';
+    if(activeSubj){
+      const btn = subjRow.querySelector('[data-s="'+CSS.escape(activeSubj)+'"]');
+      if(btn) btn.classList.add('active');
+    }
+  }
+
   function openModal(dateISO, h, m, dateObj, existingKey){
     const key = existingKey || entryKey(dateISO, h, m);
     const existing = data[key] || null;
-    modalCtx = { key, dateISO, hour:h, minute:m, dateObj, dayName: dateObj.toLocaleDateString('en-IN',{weekday:'short'}) };
+    modalCtx = { key:key, dateISO:dateISO, hour:h, minute:m, dateObj:dateObj, dayName: dateObj.toLocaleDateString('en-IN',{weekday:'short'}) };
 
     modalTitle.textContent = existing ? 'Edit lecture' : 'Add lecture';
     lecInput.value = existing ? existing.lecture : '';
+    notesInput.value = existing ? (existing.notes || '') : '';
     activeSubj = existing ? existing.subject : null;
     activeType = existing ? existing.type : 'live';
     errMsg.textContent = '';
     deleteBtn.classList.toggle('hidden', !existing);
 
-    [...subjRow.children].forEach(b=> b.classList.toggle('active', b.dataset.s===activeSubj));
-    [...typeRow.children].forEach(b=> b.classList.toggle('active', b.dataset.t===activeType));
+    renderSubjRow();
+    [...typeRow.children].forEach(function(b){ b.classList.toggle('active', b.dataset.t===activeType); });
     setDuration(existing ? (existing.durationMin||60) : 60);
 
-    overlay.classList.remove('hidden');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
     lecInput.focus();
   }
 
-  function closeModal(){ overlay.classList.add('hidden'); modalCtx = null; }
+  function closeModal(){
+    overlay.classList.remove('open');
+    if(!subjOverlay.classList.contains('open')) document.body.style.overflow = '';
+    modalCtx = null;
+  }
 
-  subjRow.addEventListener('click', ev=>{
+  function renderSubjList(){
+    const el = document.getElementById('subjList');
+    el.innerHTML = allSubjects().map(function(s){
+      const isBuiltin = BUILTIN_SUBJECTS.some(function(b){ return b.id===s.id; });
+      return '<div class="subj-list-row"><span class="dot" style="background:'+s.color+'"></span><span class="nm">'+escapeHtml(s.name)+'</span>'
+        + (isBuiltin ? '<span class="tag">Default</span>' : '<button class="rm" data-id="'+s.id+'" aria-label="Remove subject">×</button>')
+        + '</div>';
+    }).join('');
+  }
+  function renderColorPicker(){
+    const el = document.getElementById('colorPicker');
+    el.innerHTML = SUBJECT_PALETTE.map(function(c){
+      return '<span class="color-swatch'+(c===pickedColor?' picked':'')+'" data-c="'+c+'" style="background:'+c+'; color:'+c+';"></span>';
+    }).join('');
+  }
+  function openSubjModal(){
+    pickedColor = nextPaletteColor();
+    document.getElementById('newSubjName').value = '';
+    renderSubjList();
+    renderColorPicker();
+    subjOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSubjModal(){
+    subjOverlay.classList.remove('open');
+    if(!overlay.classList.contains('open')) document.body.style.overflow = '';
+    renderSubjRow();
+    render(false);
+  }
+
+  subjRow.addEventListener('click', function(ev){
+    const addBtn = ev.target.closest('.subj-add-btn');
+    if(addBtn){ openSubjModal(); return; }
     const btn = ev.target.closest('.subj-btn'); if(!btn) return;
     activeSubj = btn.dataset.s;
-    [...subjRow.children].forEach(b=> b.classList.toggle('active', b===btn));
+    [...subjRow.querySelectorAll('.subj-btn')].forEach(function(b){ b.classList.toggle('active', b===btn); });
   });
-  typeRow.addEventListener('click', ev=>{
+  typeRow.addEventListener('click', function(ev){
     const btn = ev.target.closest('.type-btn'); if(!btn) return;
     activeType = btn.dataset.t;
-    [...typeRow.children].forEach(b=> b.classList.toggle('active', b===btn));
+    [...typeRow.children].forEach(function(b){ b.classList.toggle('active', b===btn); });
   });
-  durRow.addEventListener('click', ev=>{
+  durRow.addEventListener('click', function(ev){
     const btn = ev.target.closest('.dur-btn'); if(!btn) return;
     setDuration(parseInt(btn.dataset.d,10));
   });
@@ -618,11 +1041,10 @@
       return;
     }
 
-    // overlap check against this day's occupancy, excluding the slot(s) owned by this same entry
     const dayDates = [];
     for(let i=0;i<7;i++) dayDates.push(addDays(weekStart,i));
     const occ = buildOccupancy(dayDates);
-    const dayIdx = dayDates.findIndex(d=> isoDate(d)===modalCtx.dateISO);
+    const dayIdx = dayDates.findIndex(function(d){ return isoDate(d)===modalCtx.dateISO; });
     for(let s=startSlot; s<startSlot+span; s++){
       const o = occ[dayIdx] ? occ[dayIdx][s] : null;
       if(o && o.key !== modalCtx.key){
@@ -637,29 +1059,60 @@
       lecture: lecture,
       type: activeType,
       durationMin: activeDur,
+      notes: notesInput.value.trim().slice(0,300),
       watched: existing ? existing.watched : false
     };
     persist();
     closeModal();
-    render();
+    render(false);
   });
 
   deleteBtn.addEventListener('click', function(){
     if(!modalCtx) return;
     delete data[modalCtx.key];
-    persist(); closeModal(); render();
+    persist(); closeModal(); render(false);
   });
 
   document.getElementById('cancelBtn').addEventListener('click', closeModal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) closeModal(); });
-  document.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && !overlay.classList.contains('hidden')) closeModal(); });
+  overlay.addEventListener('click', function(ev){ if(ev.target===overlay) closeModal(); });
 
-  document.getElementById('prevWeek').addEventListener('click', ()=>{ weekStart = addDays(weekStart,-7); render(); });
-  document.getElementById('nextWeek').addEventListener('click', ()=>{ weekStart = addDays(weekStart,7); render(); });
-  document.getElementById('jumpToday').addEventListener('click', ()=>{ weekStart = getMonday(new Date()); render(); });
+  subjOverlay.addEventListener('click', function(ev){ if(ev.target===subjOverlay) closeSubjModal(); });
+  document.getElementById('subjCloseBtn').addEventListener('click', closeSubjModal);
+  document.getElementById('colorPicker').addEventListener('click', function(ev){
+    const sw = ev.target.closest('.color-swatch'); if(!sw) return;
+    pickedColor = sw.dataset.c;
+    renderColorPicker();
+  });
+  document.getElementById('addSubjBtn').addEventListener('click', function(){
+    const nameInput = document.getElementById('newSubjName');
+    const name = nameInput.value.trim();
+    if(!name) { nameInput.focus(); return; }
+    addSubject(name, pickedColor || nextPaletteColor());
+    nameInput.value = '';
+    pickedColor = nextPaletteColor();
+    renderSubjList();
+    renderColorPicker();
+  });
+  document.getElementById('subjList').addEventListener('click', function(ev){
+    const btn = ev.target.closest('.rm'); if(!btn) return;
+    removeSubject(btn.dataset.id);
+    renderSubjList();
+  });
+  document.getElementById('manageSubjBtn').addEventListener('click', openSubjModal);
+
+  document.addEventListener('keydown', function(ev){
+    if(ev.key!=='Escape') return;
+    if(subjOverlay.classList.contains('open')) closeSubjModal();
+    else if(overlay.classList.contains('open')) closeModal();
+  });
+
+  document.getElementById('prevWeek').addEventListener('click', function(){ flipWeek(-1); });
+  document.getElementById('nextWeek').addEventListener('click', function(){ flipWeek(1); });
+  document.getElementById('jumpToday').addEventListener('click', function(){ weekStart = getMonday(new Date()); render(true); });
 
   document.getElementById('exportBtn').addEventListener('click', function(){
-    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const payload = { version: 2, entries: data, subjects: customSubjects };
+    const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'lecture-register-backup.json';
@@ -668,24 +1121,33 @@
   });
 
   const fileInput = document.getElementById('fileInput');
-  document.getElementById('importBtn').addEventListener('click', ()=> fileInput.click());
+  document.getElementById('importBtn').addEventListener('click', function(){ fileInput.click(); });
   fileInput.addEventListener('change', function(){
     const file = fileInput.files[0]; if(!file) return;
     const reader = new FileReader();
     reader.onload = function(e){
-      try{ data = JSON.parse(e.target.result); persist(); render(); }
+      try{
+        const parsed = JSON.parse(e.target.result);
+        if(parsed && typeof parsed==='object' && parsed.entries){
+          data = parsed.entries || {};
+          customSubjects = Array.isArray(parsed.subjects) ? parsed.subjects : [];
+        } else {
+          data = parsed || {};
+        }
+        persist(); saveSubjects(); render(true);
+      }
       catch(err){ alert('Could not read that file. Make sure it\'s a backup exported from this tool.'); }
     };
     reader.readAsText(file);
     fileInput.value = '';
   });
 
-  setInterval(render, 60000);
-  render();
+  setInterval(function(){ render(false); }, 60000);
+  render(true);
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
     });
   }
 })();
